@@ -45,7 +45,7 @@ import Foreign.Storable (Storable (..))
 import GHC.Base (Int (..), and#, int2Word#, minusWord#, not#, or#, plusWord#, plusWord2#
                 , quotRemWord2#, subWordC#, timesWord#, timesWord2#, xor#)
 import GHC.Enum (predError, succError)
-import GHC.Exts ((*#), (+#), Int#, State#, ByteArray#, MutableByteArray#, Addr#)
+import GHC.Exts ((*#), (+#), Addr#, ByteArray#, MutableByteArray#, Int#, State#, Word#)
 import GHC.Real ((%), divZeroError)
 import GHC.Word (Word64 (..), Word32, byteSwap64)
 
@@ -56,6 +56,21 @@ import GHC.IntWord64
 import Numeric (showHex)
 
 import Data.Primitive.Types (Prim (..), defaultSetByteArray#, defaultSetOffAddr#)
+
+{-# INLINE w2w64 #-}
+#if WORD_SIZE_IN_BITS < 64
+w2w64 :: Word# -> Word64#
+w2w64 w = wordToWord64# w
+
+w642w :: Word64# -> Word#
+w642w w = word64ToWord# w
+#else
+w2w64 :: Word# -> Word#
+w2w64 w = w
+
+w642w :: Word# -> Word#
+w642w w = w
+#endif
 
 data Word128 = Word128
   { word128Hi64 :: !Word64
@@ -231,10 +246,10 @@ fromEnum128 (Word128 _ a0) = fromEnum a0
 {-# INLINABLE plus128 #-}
 plus128 :: Word128 -> Word128 -> Word128
 plus128 (Word128 (W64# a1) (W64# a0)) (Word128 (W64# b1) (W64# b0)) =
-  Word128 (W64# s1) (W64# s0)
+  Word128 (W64# (w2w64 s1)) (W64# (w2w64 s0))
   where
-    !(# c1, s0 #) = plusWord2# a0 b0
-    s1a = plusWord# a1 b1
+    !(# c1, s0 #) = plusWord2# (w642w a0) (w642w b0)
+    s1a = plusWord# (w642w a1) (w642w b1)
     s1 = plusWord# c1 s1a
 
 {-# INLINABLE minus128 #-}
